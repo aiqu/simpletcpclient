@@ -1,4 +1,6 @@
 package com.naverlabs.gwangmin.sampleping;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import java.nio.*;
@@ -14,24 +16,22 @@ public class Client {
     public RecvThread rt = null;
     public String remoteAddress = "localhost";
     public int remotePort = 8080;
+    public Handler mHandler;
 
-    public Client(String addr, int port) {
+    public Client(String addr, int port, Handler handler) {
         remoteAddress = addr;
         remotePort = port;
+        mHandler = handler;
         Log.d("GMLEE", "Set addr: "+remoteAddress+" and port: "+port);
     }
 
     public void connect() {
         try {
-            Log.d("GMLEE", "Trying to connect");
             client = SocketChannel.open();
-            Log.d("GMLEE", "Open");
             isa = new InetSocketAddress(remoteAddress, remotePort);
-            Log.d("GMLEE", "Socket");
             client.connect(isa);
-            Log.d("GMLEE", "Connection success");
             client.configureBlocking(false);
-            Log.d("GMLEE", "Configured");
+            Log.d("GMLEE", "Connected");
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -92,6 +92,7 @@ public class Client {
     public class RecvThread extends Thread {
 
         public SocketChannel sc = null;
+        public int cnt = 0;
         public boolean val = true;
 
         public RecvThread(String str, SocketChannel client) {
@@ -109,7 +110,9 @@ public class Client {
                         Charset charset = Charset.forName("us-ascii");
                         CharsetDecoder decoder = charset.newDecoder();
                         CharBuffer charBuffer = decoder.decode(buf);
-                        String result = charBuffer.toString();
+                        String result = charBuffer.toString() + cnt++;
+                        Message msg = mHandler.obtainMessage(0, result);
+                        mHandler.sendMessage(msg);
                         Log.d("GMLEE", "Received "+result);
                         buf.flip();
                     }

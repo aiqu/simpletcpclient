@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">SamplePing</string>
+    <string name="IP">IP</string>
+    <string name="Port">Port</string>
+    <string name="defaultIP">localhost</string>
+    <string name="defaultPort">8080</string>
+    <string name="connect">Connect</string>
 </resources>
