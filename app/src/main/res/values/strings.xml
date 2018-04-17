@@ -8,4 +8,5 @@
     <string name="NTPPort">NPTPort</string>
     <string name="DefaeultNTPPort">123</string>
     <string name="sync">sync</string>
+    <string name="stop">Stop</string>
 </resources>

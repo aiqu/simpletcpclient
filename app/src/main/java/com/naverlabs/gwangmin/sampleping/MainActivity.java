@@ -54,6 +54,12 @@ public class MainActivity extends AppCompatActivity {
                 sync();
             }
         });
+        findViewById(R.id.stop).setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                c.interruptThread();
+            }
+        });
     }
 
     public void updateAddress() {
