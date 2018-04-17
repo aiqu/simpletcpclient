@@ -3,11 +3,17 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import com.instacart.library.truetime.TrueTimeRx;
+
 import java.nio.*;
 import java.nio.channels.*;
 import java.net.*;
 import java.io.*;
 import java.nio.charset.*;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.util.Calendar;
+import java.util.Date;
 
 public class Client {
 
@@ -111,9 +117,14 @@ public class Client {
                         CharsetDecoder decoder = charset.newDecoder();
                         CharBuffer charBuffer = decoder.decode(buf);
                         String result = charBuffer.toString() + cnt++;
+                        Log.d("GMLEE", "Received "+result);
+                        Date truetime = TrueTimeRx.now();
+                        Date localtime = Calendar.getInstance().getTime();
+                        long diffInMillies = truetime.getTime() - localtime.getTime();
+                        Log.d("GMLEE", "TrueTime: "+ truetime+" Diff: "+ diffInMillies);
+                        result += " time diff: " + diffInMillies;
                         Message msg = mHandler.obtainMessage(0, result);
                         mHandler.sendMessage(msg);
-                        Log.d("GMLEE", "Received "+result);
                         buf.flip();
                     }
                 }
