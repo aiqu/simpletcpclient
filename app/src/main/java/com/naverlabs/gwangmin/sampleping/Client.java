@@ -23,6 +23,8 @@ public class Client {
     public String remoteAddress = "localhost";
     public int remotePort = 8080;
     public Handler mHandler;
+    public final static int CONNECTED = 0;
+    public final static int RECEIVED = 1;
 
     public Client(String addr, int port, Handler handler) {
         remoteAddress = addr;
@@ -33,11 +35,15 @@ public class Client {
 
     public void connect() {
         try {
+            if (client != null) {
+                client.close();
+            }
             client = SocketChannel.open();
             isa = new InetSocketAddress(remoteAddress, remotePort);
             client.connect(isa);
             client.configureBlocking(false);
             Log.d("GMLEE", "Connected");
+            mHandler.sendEmptyMessage(CONNECTED);
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -47,6 +53,7 @@ public class Client {
 
     public void finalize() {
         try {
+            interruptThread();
             client.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -85,16 +92,19 @@ public class Client {
                         Charset charset = Charset.forName("us-ascii");
                         CharsetDecoder decoder = charset.newDecoder();
                         CharBuffer charBuffer = decoder.decode(buf);
-                        String result = charBuffer.toString() + cnt++;
+                        String result = charBuffer.toString().trim() + cnt++;
                         Log.d("GMLEE", "Received "+result);
-                        Date truetime = TrueTimeRx.now();
-                        Date localtime = Calendar.getInstance().getTime();
-                        long diffInMillies = truetime.getTime() - localtime.getTime();
-                        Log.d("GMLEE", "TrueTime: "+ truetime+" Diff: "+ diffInMillies);
-                        result += " time diff: " + diffInMillies;
-                        Message msg = mHandler.obtainMessage(0, result);
+                        if (TrueTimeRx.isInitialized()) {
+                            Log.d("GMLEE", "Initialized");
+                            Date truetime = TrueTimeRx.now();
+                            Date localtime = Calendar.getInstance().getTime();
+                            long diffInMillies = truetime.getTime() - localtime.getTime();
+                            Log.d("GMLEE", "TrueTime: " + truetime + " Diff: " + diffInMillies);
+                            result += " time diff: " + diffInMillies;
+                        }
+                        Message msg = mHandler.obtainMessage(RECEIVED, result);
                         mHandler.sendMessage(msg);
-                        buf.flip();
+                        buf.clear();
                     }
                 }
             } catch (IOException e) {

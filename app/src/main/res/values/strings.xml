@@ -2,11 +2,13 @@
     <string name="app_name">SamplePing</string>
     <string name="IP">IP</string>
     <string name="Port">Port</string>
-    <string name="defaultIP">localhost</string>
+    <string name="defaultIP">10.77.10.68</string>
     <string name="defaultPort">8080</string>
     <string name="connect">Connect</string>
     <string name="NTPPort">NPTPort</string>
     <string name="DefaeultNTPPort">123</string>
     <string name="sync">sync</string>
-    <string name="stop">Stop</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="startRecord">Start record</string>
+    <string name="recording">recording</string>
 </resources>
