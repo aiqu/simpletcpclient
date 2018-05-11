@@ -66,9 +66,9 @@ public class MainActivity extends AppCompatActivity {
                         if (result.contains("ping")) {
                             Toast.makeText(mContext, result, Toast.LENGTH_SHORT).show();
                         } else if (result.contains("start")) {
-                            toggleRecording();
+                            startRecording();
                         } else if (result.contains("stop")) {
-                            toggleRecording();
+                            stopRecording();
                         } else {
                             Log.d("GMLEE", "Unhandled message: "+result);
                         }
@@ -114,7 +114,11 @@ public class MainActivity extends AppCompatActivity {
         recordingStatusBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                toggleRecording();
+                if (isRecording) {
+                    stopRecording();
+                } else {
+                    startRecording();
+                }
             }
         });
         if (!isExternalStorageWritable()) {
@@ -168,13 +172,8 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
     }
 
-    public void toggleRecording() {
-        if (isRecording) {
-            Log.d("GMLEE", "Stop recording");
-            cameraView.stopVideo();
-            recordingStatusBtn.setText(R.string.startRecord);
-            isRecording = false;
-        } else {
+    public void startRecording() {
+        if (!isRecording) {
             Log.d("GMLEE", "Start recording");
             long now = getUTCTime();
             File f = new File(Environment.getExternalStorageDirectory(), GUID + "_" + Long.toString(now) + ".mp4");
@@ -183,6 +182,15 @@ public class MainActivity extends AppCompatActivity {
             String recordStr = getResources().getString(R.string.recording);
             recordingStatusBtn.setText(recordStr + " " + f.getName());
             isRecording = true;
+        }
+    }
+
+    public void stopRecording() {
+        if (isRecording) {
+            Log.d("GMLEE", "Stop recording");
+            cameraView.stopVideo();
+            recordingStatusBtn.setText(R.string.startRecord);
+            isRecording = false;
         }
     }
 
