@@ -2,13 +2,22 @@
     <string name="app_name">SamplePing</string>
     <string name="IP">IP</string>
     <string name="Port">Port</string>
+    <!--<string name="defaultIP">192.168.125.107</string>-->
     <string name="defaultIP">10.77.10.68</string>
     <string name="defaultPort">8080</string>
     <string name="connect">Connect</string>
-    <string name="NTPPort">NPTPort</string>
-    <string name="DefaeultNTPPort">123</string>
+    <string name="NTPPort">NTP</string>
+    <string name="DefaultNTPPort">123</string>
     <string name="sync">sync</string>
     <string name="disconnect">Disconnect</string>
     <string name="startRecord">Start record</string>
     <string name="recording">recording</string>
+    <string name="request_permission">This sample needs camera permission.</string>
+    <string name="camera_error">This device doesn\'t support Camera2 API.</string>
+    <string name="exposure">Exposure</string>
+    <string name="default_exposure">0</string>
+    <string name="iso">ISO</string>
+    <string name="default_iso">0</string>
+    <string name="interval">Interval</string>
+    <string name="default_interval">1000</string>
 </resources>
