@@ -63,6 +63,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -103,6 +104,7 @@ public class CameraFragment extends Fragment
     Long exposure, mInterval;
     Integer iso;
     static File mRoot;
+    boolean useAE = false;
 
     private static final int IMAGE_SAVED = 99;
 
@@ -328,20 +330,49 @@ public class CameraFragment extends Fragment
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
                     if (afState == null) {
                         captureStillPicture();
-                    } else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState ||
-                            CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
-                        // CONTROL_AE_STATE can be null on some devices
-                        Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
-                            mState = STATE_PICTURE_TAKEN;
-                            captureStillPicture();
+                    } else if (CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
+                        lockFocus();
+                    } else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState) {
+                            if (useAE) {
+                                // CONTROL_AE_STATE can be null on some devices
+                                Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                                if (aeState == null || aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
+                                    mState = STATE_PICTURE_TAKEN;
+                                    captureStillPicture();
+                                } else {
+                                    runPrecaptureSequence();
+                                }
+                            } else {
+                                mState = STATE_PICTURE_TAKEN;
+                                captureStillPicture();
+                            }
                     }
                     break;
                 }
-                case STATE_PICTURE_TAKEN:
+                case STATE_WAITING_PRECAPTURE: {
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                    if (aeState == null ||
+                            aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
+                            aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED) {
+                        mState = STATE_WAITING_NON_PRECAPTURE;
+                    }
+                    break;
+                }
+                case STATE_WAITING_NON_PRECAPTURE: {
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                    if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
+                        mState = STATE_PICTURE_TAKEN;
+                        captureStillPicture();
+                    }
+                    break;
+                }
+                case STATE_PICTURE_TAKEN: {
                     Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
                     Long aeValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
                     Integer isoValue = result.get(CaptureResult.SENSOR_SENSITIVITY);
                     Log.d(TAG, "AE state: " + aeState + " Value: " + aeValue + " Iso: " + isoValue);
+                    break;
+                }
             }
         }
 
@@ -360,6 +391,7 @@ public class CameraFragment extends Fragment
         }
 
     };
+    private CheckBox mCbAE;
 
     /**
      * Shows a {@link Toast} on the UI thread.
@@ -672,6 +704,29 @@ public class CameraFragment extends Fragment
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
 
+            }
+        });
+        mCbAE = view.findViewById(R.id.auto_exposure);
+        mCbAE.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            useAE = isChecked;
+            try {
+                if (mCaptureSession != null) {
+                    mCaptureSession.stopRepeating();
+                    mCaptureSession.abortCaptures();
+                    if (useAE) {
+                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                CaptureRequest.CONTROL_AE_MODE_ON);
+                    } else {
+                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                CaptureRequest.CONTROL_AE_MODE_OFF);
+                        mPreviewRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposure);
+                        mPreviewRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, iso.intValue());
+                    }
+                    mPreviewRequest = mPreviewRequestBuilder.build();
+                    mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, mBackgroundHandler);
+                }
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
             }
         });
     }
@@ -1053,12 +1108,17 @@ public class CameraFragment extends Fragment
                                 // Auto focus should be continuous for camera preview.
                                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                                        CaptureRequest.CONTROL_AE_MODE_OFF);
-                                mPreviewRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,
-                                        exposure);
-                                mPreviewRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY,
-                                        iso);
+                                if (useAE) {
+                                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                            CaptureRequest.CONTROL_AE_MODE_ON);
+                                } else {
+                                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                                            CaptureRequest.CONTROL_AE_MODE_OFF);
+                                    mPreviewRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,
+                                            exposure);
+                                    mPreviewRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY,
+                                            iso);
+                                }
 
                                 // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewRequestBuilder.build();
@@ -1138,6 +1198,17 @@ public class CameraFragment extends Fragment
         }
     }
 
+    private void runPrecaptureSequence() {
+        try {
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+            mState = STATE_WAITING_PRECAPTURE;
+            mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Capture a still picture. This method should be called when we get a response in
      * {@link #mCaptureCallback} from both {@link #lockFocus()}.
@@ -1156,12 +1227,18 @@ public class CameraFragment extends Fragment
             // Use the same AE and AF modes as the preview.
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                    CaptureRequest.CONTROL_AE_MODE_OFF);
-            captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,
-                    exposure);
-            captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY,
-                    iso);
+            if (useAE) {
+                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                        CaptureRequest.CONTROL_AE_MODE_ON);
+                setAutoFlash(captureBuilder);
+            } else {
+                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                        CaptureRequest.CONTROL_AE_MODE_OFF);
+                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,
+                        exposure);
+                captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY,
+                        iso);
+            }
 
             // Orientation
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
@@ -1217,6 +1294,13 @@ public class CameraFragment extends Fragment
                     mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
+        if (mFlashSupported) {
+            requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
         }
     }
 
