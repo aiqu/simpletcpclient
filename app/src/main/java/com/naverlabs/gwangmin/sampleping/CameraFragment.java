@@ -57,7 +57,6 @@ import android.util.Log;
 import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
@@ -69,13 +68,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.instacart.library.truetime.TrueTimeRx;
-import com.wonderkiln.camerakit.CameraView;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -85,7 +82,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.function.IntPredicate;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 
@@ -99,7 +95,6 @@ public class CameraFragment extends Fragment
     Handler mHandler;
     String hostAddr;
     int hostPort, ntpPort;
-    CameraView cameraView;
     Button recordingStatusBtn;
     boolean isConnected, isRecording;
     Range<Long> exposureRange;
@@ -107,6 +102,7 @@ public class CameraFragment extends Fragment
     SeekBar exposure_seekbar, iso_seekbar;
     Long exposure, mInterval;
     Integer iso;
+    static File mRoot;
 
     private static final int IMAGE_SAVED = 99;
 
@@ -716,6 +712,11 @@ public class CameraFragment extends Fragment
     public void startRecording() {
         if (!isRecording) {
             Log.d("GMLEE", "Start recording");
+            Long startTime = getUTCTime();
+            mRoot = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), Long.toString(startTime));
+            if (!mRoot.exists()) {
+                mRoot.mkdirs();
+            }
             mInterval = Long.parseLong(tvInterval.getText().toString());
             mCCapture = new ContinuousCapture(mInterval);
             mCCapture.start();
@@ -1238,7 +1239,7 @@ public class CameraFragment extends Fragment
         ImageSaver(Image image, Handler handler) {
             mImage = image;
             long now = getUTCTime();
-            mFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), GUID + "_" + Long.toString(now) + ".jpg");
+            mFile = new File(mRoot, GUID + "_" + Long.toString(now) + ".jpg");
             mHandler = handler;
         }
 
