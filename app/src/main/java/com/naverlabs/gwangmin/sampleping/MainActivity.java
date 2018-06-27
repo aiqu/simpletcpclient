@@ -21,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
             GUID = UUID.randomUUID().toString().substring(0,7);
             SharedPreferences.Editor editor = pref.edit();
             editor.putString("ID", GUID);
+            editor.commit();
         }
         Log.d("GMLEE", "GUID: " + GUID);
         getSupportActionBar().setTitle(GUID);
