@@ -1322,7 +1322,8 @@ public class CameraFragment extends Fragment
 
         ImageSaver(Image image, Handler handler) {
             mImage = image;
-            long now = getUTCTime();
+            // In micro seconds
+            long now = getUTCTime()*1000;
             mFile = new File(mRoot, GUID + "_" + Long.toString(now) + ".jpg");
             mHandler = handler;
         }
